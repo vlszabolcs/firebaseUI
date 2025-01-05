@@ -4,10 +4,23 @@ import firebase_admin
 from firebase_admin import credentials, db
 import time
 
+
+def read_config(file_path):
+    config = {}
+    with open(file_path, 'r') as file:
+        for line in file:
+            name, value = line.strip().split('=')
+            config[name] = value
+    return config
+
+config = read_config('conf.txt')
+databaseURL = config.get('databaseURL')
+certPath = config.get('certPath')
+
 # Firebase Admin SDK inicializálása
-cred = credentials.Certificate("espresso-1d82f-firebase-adminsdk-ejsns-c87b35e13b.json")  # Szolgáltatási fiók kulcsfájl
+cred = credentials.Certificate(certPath)  # Szolgáltatási fiók kulcsfájl
 firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://espresso-1d82f-default-rtdb.europe-west1.firebasedatabase.app/"  # RTDB URL
+    "databaseURL": databaseURL  # RTDB URL
 })
 
 # Funkciók a Firebase kezeléséhez
