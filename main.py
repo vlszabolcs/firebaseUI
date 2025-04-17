@@ -162,42 +162,50 @@ def on_double_click(event):
         # Kredit oszlop nem módosítható
         return
 
-    def save_addition(event):
+    def save_edit(event):
         new_value = entry.get()
-        try:
-            addition = int(new_value)  # Lehetővé teszi a negatív értékeket is
-            current_credit = int(tree.set(item, "Kredit"))
-            updated_credit = current_credit + addition
+        tree.set(item, column_name, new_value)
 
-            # Ellenőrizzük, hogy az új kredit érték nem megy negatívba
-            if updated_credit < 0:
-                messagebox.showerror("Hiba", "A kredit értéke nem lehet negatív!")
-                entry.destroy()
-                return
+        # Update Firebase
+        user_id = tree.item(item, "values")[0]
+        user_ref = db.reference(f"users/{user_id}")
 
-            # Update the Kredit oszlop értéke
-            tree.set(item, "Kredit", updated_credit)
+        # Update the corresponding field in Firebase
+        if column_name == "Név":
+            user_ref.update({"name": new_value, "update": int(time.time())})
+        elif column_name == "Hozzáadás":
+            try:
+                addition = int(new_value)
+                current_credit = int(tree.set(item, "Kredit"))
+                updated_credit = current_credit + addition
 
-            # Update Firebase
-            user_id = tree.item(item, "values")[0]
-            user_ref = db.reference(f"users/{user_id}")
-            user_ref.update({"credit": updated_credit, "update": int(time.time())})
+                if updated_credit < 0:
+                    messagebox.showerror("Hiba", "A kredit értéke nem lehet negatív!")
+                    entry.destroy()
+                    return
 
-            # Log the credit addition or subtraction
-            log(user_id, action=10, remaining_credit=updated_credit)
+                # Update the Kredit oszlop értéke
+                tree.set(item, "Kredit", updated_credit)
+                user_ref.update({"credit": updated_credit, "update": int(time.time())})
 
-        except ValueError:
-            messagebox.showerror("Hiba", "Kérjük, érvényes számot adjon meg!")
-        finally:
-            entry.destroy()
+                # Log the credit addition or subtraction
+                log(user_id, action=10, remaining_credit=updated_credit)
+            except ValueError:
+                messagebox.showerror("Hiba", "Kérjük, érvényes számot adjon meg!")
+        elif column_name == "Kölcsön":
+            loan_value = new_value.lower() in ["igen", "true", "1"]
+            user_ref.update({"loan": loan_value, "update": int(time.time())})
 
-    if column_name == "Hozzáadás":
-        x, y, width, height = tree.bbox(item, column=column)
-        entry = tk.Entry(root)
-        entry.place(x=x, y=y + height // 2, anchor="w", width=width)
-        entry.focus_set()
-        entry.bind("<Return>", save_addition)
-        entry.bind("<FocusOut>", lambda e: entry.destroy())
+        entry.destroy()
+
+    # Create an entry widget for editing
+    x, y, width, height = tree.bbox(item, column=column)
+    entry = tk.Entry(root)
+    entry.place(x=x, y=y + height // 2, anchor="w", width=width)
+    entry.insert(0, tree.set(item, column_name))
+    entry.focus_set()
+    entry.bind("<Return>", save_edit)
+    entry.bind("<FocusOut>", lambda e: entry.destroy())
 
 tree.bind("<Double-1>", on_double_click)
 
